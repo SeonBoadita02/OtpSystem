@@ -1,0 +1,23 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:GetItem",
+                "dynamodb:PutItem",
+                "dynamodb:UpdateItem",
+                "dynamodb:DeleteItem"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:ap-south-1:881962383035:table/DATA.UserAccess",
+                "arn:aws:dynamodb:ap-south-1:881962383035:table/DATA.Otp"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": "ses:SendEmail",
+            "Resource": "arn:aws:ses:ap-south-1:881962383035:identity/iitintern002@gmail.com"
+        }
+    ]
+}

@@ -1,0 +1,18 @@
+{
+  "Information": [
+    "This file is used to configure the AWS Lambda function deployment for SaveOrResendOtpLambda.",
+    "To deploy, run: dotnet lambda deploy-function",
+    "You can override any of these settings with command line options."
+  ],
+  "profile": "default",
+  "region": "ap-south-1",
+  "configuration": "Release",
+  "function-runtime": "dotnet8",
+  "function-memory-size": 256,
+  "function-timeout": 30,
+  "function-handler": "SaveOrResendOtpLambda::SaveOrResendOtpLambda.Function::FunctionHandler",
+  "framework": "net8.0",
+  "function-name": "SaveOrResendOtpLambda",
+  "package-type": "Zip",
+  "function-role": "arn:aws:iam::881962383035:role/service-role/SaveOrResendOtpLambda-role-znn3fucm"
+}

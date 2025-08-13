@@ -1,0 +1,17 @@
+D:\workspace\SESLambda\OtpSystem\VerifyOtpLambda\obj\Debug\net8.0\VerifyOtpLambda.csproj.AssemblyReference.cache
+D:\workspace\SESLambda\OtpSystem\VerifyOtpLambda\obj\Debug\net8.0\VerifyOtpLambda.GeneratedMSBuildEditorConfig.editorconfig
+D:\workspace\SESLambda\OtpSystem\VerifyOtpLambda\obj\Debug\net8.0\VerifyOtpLambda.AssemblyInfoInputs.cache
+D:\workspace\SESLambda\OtpSystem\VerifyOtpLambda\obj\Debug\net8.0\VerifyOtpLambda.AssemblyInfo.cs
+D:\workspace\SESLambda\OtpSystem\VerifyOtpLambda\obj\Debug\net8.0\VerifyOtpLambda.csproj.CoreCompileInputs.cache
+D:\workspace\SESLambda\OtpSystem\VerifyOtpLambda\bin\Debug\net8.0\VerifyOtpLambda.deps.json
+D:\workspace\SESLambda\OtpSystem\VerifyOtpLambda\bin\Debug\net8.0\VerifyOtpLambda.runtimeconfig.json
+D:\workspace\SESLambda\OtpSystem\VerifyOtpLambda\bin\Debug\net8.0\VerifyOtpLambda.dll
+D:\workspace\SESLambda\OtpSystem\VerifyOtpLambda\bin\Debug\net8.0\VerifyOtpLambda.pdb
+D:\workspace\SESLambda\OtpSystem\VerifyOtpLambda\bin\Debug\net8.0\Shared.dll
+D:\workspace\SESLambda\OtpSystem\VerifyOtpLambda\bin\Debug\net8.0\Shared.pdb
+D:\workspace\SESLambda\OtpSystem\VerifyOtpLambda\obj\Debug\net8.0\VerifyOt.EF776D4A.Up2Date
+D:\workspace\SESLambda\OtpSystem\VerifyOtpLambda\obj\Debug\net8.0\VerifyOtpLambda.dll
+D:\workspace\SESLambda\OtpSystem\VerifyOtpLambda\obj\Debug\net8.0\refint\VerifyOtpLambda.dll
+D:\workspace\SESLambda\OtpSystem\VerifyOtpLambda\obj\Debug\net8.0\VerifyOtpLambda.pdb
+D:\workspace\SESLambda\OtpSystem\VerifyOtpLambda\obj\Debug\net8.0\VerifyOtpLambda.genruntimeconfig.cache
+D:\workspace\SESLambda\OtpSystem\VerifyOtpLambda\obj\Debug\net8.0\ref\VerifyOtpLambda.dll
