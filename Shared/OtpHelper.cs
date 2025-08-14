@@ -7,7 +7,6 @@ public static class OtpHelper
 {
     public static string GenerateNumericCode(int digits)
     {
-        // Cryptographically strong numeric OTP with leading zeros
         var max = (int)Math.Pow(10, digits);
         var bytes = RandomNumberGenerator.GetBytes(4);
         var val = BitConverter.ToUInt32(bytes, 0) % (uint)max;

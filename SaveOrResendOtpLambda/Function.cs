@@ -38,36 +38,41 @@ public class Function
             var user = await _ddb.GetUserByEmailAsync(payload.Email);
             if (user is not null)
             {
-                var id = long.Parse(user["Id"].N); // Id is a Number
+                var id = long.Parse(user["Id"].N);
                 try
                 {
-                    await _ddb.UpdateUserOnResendAsync(id, DynamoDbHelper.NowEpoch(), Config.MaxResends);
+                    await _ddb.UpdateUserOnResendAsync(id, DynamoDbHelper.NowIso8601());
                 }
                 catch (Amazon.DynamoDBv2.Model.ConditionalCheckFailedException)
                 {
-                    // Either validated already or resend limit reached
                     var isValidated = user.ContainsKey("IsValidated") && user["IsValidated"].BOOL.GetValueOrDefault();
-                    var resendCount = user.ContainsKey("ResendCount") ? int.Parse(user["ResendCount"].N) : 0;
+                    var verificationAttempt = user.ContainsKey("VerificationAttempt") ? int.Parse(user["VerificationAttempt"].N) : 0;
 
                     if (isValidated)
                         return Conflict("User already validated.");
-                    if (resendCount >= Config.MaxResends)
-                        return TooManyRequests("Resend limit reached. Try again later or contact support.");
+                    if (verificationAttempt >= Config.MaxAttempts)
+                        return TooManyRequests("Verification attempt limit reached. Try again later or contact support.");
                 }
             }
 
             // Generate + hash OTP
             var otp = OtpHelper.GenerateNumericCode(Config.OtpLength);
             var hash = OtpHelper.Sha256Hex(otp);
-            var expiry = DynamoDbHelper.NowEpoch() + (Config.OtpExpiryMinutes * 60);
+            var expiry = DynamoDbHelper.AddMinutesToIso8601(DynamoDbHelper.NowIso8601(), Config.OtpExpiryMinutes);
 
-            // Put/overwrite OTP item
-            await _ddb.PutOtpAsync(payload.Email, hash, expiry);
+            // Update OTP directly in DATA.UserAccess
+            await _ddb.UpdateOtpAsync(payload.Email, hash, expiry);
 
             // Email it (SES)
             await _emailer.SendOtpAsync(payload.Email, otp);
 
-            return Ok(new { message = "OTP sent" });
+            return Ok(new
+            {
+                message = "OTP sent",
+                createDate = user?["CreateDate"].S,
+                updateDate = user?["UpdateDate"].S,
+                verificationCodeExpiry = expiry
+            });
         }
         catch (Exception ex)
         {

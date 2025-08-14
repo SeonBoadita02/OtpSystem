@@ -1,6 +1,8 @@
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading.Tasks;
 
 namespace Shared;
@@ -8,9 +10,16 @@ namespace Shared;
 public class DynamoDbHelper
 {
     private readonly IAmazonDynamoDB _ddb;
+
     public DynamoDbHelper(IAmazonDynamoDB ddb) => _ddb = ddb;
 
-    public static long NowEpoch() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+    public static string NowIso8601() => DateTime.UtcNow.ToString("o");
+
+    public static string AddMinutesToIso8601(string isoDate, int minutes)
+    {
+        var dateTime = DateTime.Parse(isoDate, null, DateTimeStyles.RoundtripKind);
+        return dateTime.AddMinutes(minutes).ToString("o");
+    }
 
     // USER ACCESS
     public async Task<Dictionary<string, AttributeValue>?> GetUserByEmailAsync(string email)
@@ -33,7 +42,7 @@ public class DynamoDbHelper
         var resp = await _ddb.GetItemAsync(new GetItemRequest
         {
             TableName = Config.UserAccessTable,
-            Key = new() { ["Id"] = new AttributeValue { N = id } } // Id is a Number
+            Key = new() { ["Id"] = new AttributeValue { N = id } }
         });
         return resp.Item.Count == 0 ? null : resp.Item;
     }
@@ -42,37 +51,35 @@ public class DynamoDbHelper
     {
         var item = new Dictionary<string, AttributeValue>
         {
-            ["Id"] = new AttributeValue { N = u.Id.ToString() }, // Id is a Number
+            ["Id"] = new AttributeValue { N = u.Id.ToString("D4") }, // Auto-increment with leading zeros
             ["Email"] = new AttributeValue { S = u.Email },
             ["MobileNumber"] = new AttributeValue { S = u.MobileNumber },
             ["VerificationAttempt"] = new AttributeValue { N = u.VerificationAttempt.ToString() },
-            ["ResendCount"] = new AttributeValue { N = u.ResendCount.ToString() },
             ["IsValidated"] = new AttributeValue { BOOL = u.IsValidated },
-            ["CreateDate"] = new AttributeValue { N = u.CreateDate.ToString() },
-            ["UpdateDate"] = new AttributeValue { N = u.UpdateDate.ToString() },
-            ["IsLocked"] = new AttributeValue { BOOL = u.IsLocked }
+            ["CreateDate"] = new AttributeValue { S = u.CreateDate },
+            ["UpdateDate"] = new AttributeValue { S = u.UpdateDate },
+            ["VerificationCodeHash"] = new AttributeValue { S = u.VerificationCodeHash },
+            ["VerificationCodeExpiry"] = new AttributeValue { S = u.VerificationCodeExpiry }
         };
         await _ddb.PutItemAsync(new PutItemRequest
         {
             TableName = Config.UserAccessTable,
             Item = item,
-            ConditionExpression = "attribute_not_exists(Id)" // Ensure no overwrite on first save
+            ConditionExpression = "attribute_not_exists(Id)"
         });
     }
 
-    public async Task UpdateUserOnResendAsync(long id, long updateDate, int maxResends)
+    public async Task UpdateUserOnResendAsync(long id, string updateDate)
     {
         await _ddb.UpdateItemAsync(new UpdateItemRequest
         {
             TableName = Config.UserAccessTable,
-            Key = new() { ["Id"] = new AttributeValue { N = id.ToString() } }, // Id is a Number
-            UpdateExpression = "SET ResendCount = ResendCount + :one, UpdateDate = :ud",
-            ConditionExpression = "ResendCount < :max AND IsValidated = :false",
+            Key = new() { ["Id"] = new AttributeValue { N = id.ToString() } },
+            UpdateExpression = "SET UpdateDate = :ud",
+            ConditionExpression = "IsValidated = :false",
             ExpressionAttributeValues = new()
             {
-                [":one"] = new AttributeValue { N = "1" },
-                [":ud"] = new AttributeValue { N = updateDate.ToString() },
-                [":max"] = new AttributeValue { N = maxResends.ToString() },
+                [":ud"] = new AttributeValue { S = updateDate },
                 [":false"] = new AttributeValue { BOOL = false }
             }
         });
@@ -83,17 +90,17 @@ public class DynamoDbHelper
         var user = await GetUserByEmailAsync(email);
         if (user is null)
         {
-            var now = NowEpoch();
+            var now = NowIso8601();
             await PutUserAsync(new UserAccess(
-                Id: DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                Id: Config.GetNextId(),
                 Email: email,
                 MobileNumber: mobile,
                 VerificationAttempt: 0,
-                ResendCount: 0,
                 IsValidated: false,
                 CreateDate: now,
                 UpdateDate: now,
-                IsLocked: false
+                VerificationCodeHash: string.Empty,
+                VerificationCodeExpiry: now
             ));
         }
     }
@@ -103,14 +110,12 @@ public class DynamoDbHelper
         await _ddb.UpdateItemAsync(new UpdateItemRequest
         {
             TableName = Config.UserAccessTable,
-            Key = new() { ["Id"] = new AttributeValue { N = id.ToString() } }, // Id is a Number
-            UpdateExpression = "SET VerificationAttempt = VerificationAttempt + :one, IsLocked = if_not_exists(IsLocked, :false) OR (VerificationAttempt + :one >= :max), UpdateDate = :ud",
+            Key = new() { ["Id"] = new AttributeValue { N = id.ToString() } },
+            UpdateExpression = "SET VerificationAttempt = VerificationAttempt + :one, UpdateDate = :ud",
             ExpressionAttributeValues = new()
             {
                 [":one"] = new AttributeValue { N = "1" },
-                [":max"] = new AttributeValue { N = maxAttempts.ToString() },
-                [":false"] = new AttributeValue { BOOL = false },
-                [":ud"] = new AttributeValue { N = NowEpoch().ToString() }
+                [":ud"] = new AttributeValue { S = NowIso8601() }
             }
         });
     }
@@ -120,51 +125,37 @@ public class DynamoDbHelper
         await _ddb.UpdateItemAsync(new UpdateItemRequest
         {
             TableName = Config.UserAccessTable,
-            Key = new() { ["Id"] = new AttributeValue { N = id.ToString() } }, // Id is a Number
-            UpdateExpression = "SET IsValidated = :true, ResendCount = :zero, UpdateDate = :ud",
+            Key = new() { ["Id"] = new AttributeValue { N = id.ToString() } },
+            UpdateExpression = "SET IsValidated = :true, VerificationAttempt = :zero, UpdateDate = :ud",
             ExpressionAttributeValues = new()
             {
                 [":true"] = new AttributeValue { BOOL = true },
                 [":zero"] = new AttributeValue { N = "0" },
-                [":ud"] = new AttributeValue { N = NowEpoch().ToString() }
+                [":ud"] = new AttributeValue { S = NowIso8601() }
             }
         });
     }
 
-    // OTP
-    public async Task PutOtpAsync(string email, string otpHash, long expiry)
+    public async Task UpdateOtpAsync(string email, string otpHash, string expiry)
     {
-        var item = new Dictionary<string, AttributeValue>
-        {
-            ["Email"] = new AttributeValue { S = email },
-            ["VerificationCodeHash"] = new AttributeValue { S = otpHash },
-            ["VerificationCodeExpiry"] = new AttributeValue { N = expiry.ToString() },
-            ["ttl"] = new AttributeValue { N = expiry.ToString() }
-        };
-        await _ddb.PutItemAsync(new PutItemRequest
-        {
-            TableName = Config.OtpTable,
-            Item = item
-        });
-    }
+        // Retrieve user by email to get the Id
+        var user = await GetUserByEmailAsync(email);
+        if (user == null)
+            throw new Exception("User not found.");
 
-    public async Task<Dictionary<string, AttributeValue>?> GetOtpAsync(string email)
-    {
-        var resp = await _ddb.GetItemAsync(new GetItemRequest
-        {
-            TableName = Config.OtpTable,
-            Key = new() { ["Email"] = new AttributeValue { S = email } },
-            ConsistentRead = true
-        });
-        return resp.Item.Count == 0 ? null : resp.Item;
-    }
+        var id = long.Parse(user["Id"].N);
 
-    public async Task DeleteOtpAsync(string email)
-    {
-        await _ddb.DeleteItemAsync(new DeleteItemRequest
+        // Update the item using the Id as the primary key
+        await _ddb.UpdateItemAsync(new UpdateItemRequest
         {
-            TableName = Config.OtpTable,
-            Key = new() { ["Email"] = new AttributeValue { S = email } }
+            TableName = Config.UserAccessTable,
+            Key = new() { ["Id"] = new AttributeValue { N = id.ToString() } },
+            UpdateExpression = "SET VerificationCodeHash = :hash, VerificationCodeExpiry = :exp",
+            ExpressionAttributeValues = new()
+            {
+                [":hash"] = new AttributeValue { S = otpHash },
+                [":exp"] = new AttributeValue { S = expiry }
+            }
         });
     }
 }

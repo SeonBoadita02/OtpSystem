@@ -5,16 +5,9 @@ public record UserAccess(
     string Email,
     string MobileNumber,
     int VerificationAttempt,
-    int ResendCount,
     bool IsValidated,
-    long CreateDate,
-    long UpdateDate,
-    bool IsLocked = false
-);
-
-public record OtpItem(
-    string Email,
+    string CreateDate,
+    string UpdateDate,
     string VerificationCodeHash,
-    long VerificationCodeExpiry,
-    long ttl
+    string VerificationCodeExpiry
 );

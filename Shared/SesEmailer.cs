@@ -11,10 +11,9 @@ public class SesEmailer
 
     public async Task SendOtpAsync(string toEmail, string otp)
     {
-        // Plain email (same template for first-send & resend per your instruction)
-        var subject = "Your verification code";
-        var textBody = $"Your OTP is: {otp}\nIt will expire in {Config.OtpExpiryMinutes} minutes.";
-        var htmlBody = $"<p>Your OTP is: <strong>{otp}</strong></p><p>It will expire in {Config.OtpExpiryMinutes} minutes.</p>";
+        var subject = "Your Verification Code [No Reply]";
+        var textBody = $"Your OTP is: {otp}\nIt will expire in {Config.OtpExpiryMinutes} minutes.\nDo not reply to this email.";
+        var htmlBody = $"<p>Your OTP is: <strong>{otp}</strong></p><p>It will expire in {Config.OtpExpiryMinutes} minutes.</p><p><em>Do not reply to this email.</em></p>";
 
         var req = new SendEmailRequest
         {
@@ -32,6 +31,7 @@ public class SesEmailer
                     }
                 }
             }
+            // ConfigurationSetName removed since it was causing the error
         };
         await _ses.SendEmailAsync(req);
     }
